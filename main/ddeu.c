@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "esp_log.h"
@@ -17,6 +18,8 @@
 #include <rmw_uros/options.h>
 #include <sensor_msgs/msg/joint_state.h>
 #include <uros_network_interfaces.h>
+
+#include "rosidl_runtime_c/string_functions.h"
 
 #define RCCHECK(fn)                                                            \
   {                                                                            \
@@ -38,13 +41,21 @@
 
 rcl_publisher_t publisher;
 sensor_msgs__msg__JointState joint_state_msg;
-static double x = 1.23;
+static double _pos[2] = {0.0, 0.0};
+static double _vel[2] = {0.0, 0.0};
+const char *_names[2] = {"axis0", "axis1"};
+const char *_frame_id = "/ddeu";
 
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    joint_state_msg.header.stamp.sec = ts.tv_sec;
+    joint_state_msg.header.stamp.nanosec = ts.tv_nsec;
     RCSOFTCHECK(rcl_publish(&publisher, &joint_state_msg, NULL));
-    x = x + 1.1;
+    _pos[0] = _pos[0] + 1.1; // Replace with real values
+    _pos[1] = _pos[1] + 2.2;
   }
 }
 
@@ -80,9 +91,19 @@ void micro_ros_task(void *arg) {
 
   // Initial Joint State dummy message
   sensor_msgs__msg__JointState__init(&joint_state_msg);
-  joint_state_msg.position.data = &x;
-  joint_state_msg.position.size = 1;
-  joint_state_msg.position.capacity = 1;
+  joint_state_msg.position.data = _pos;
+  joint_state_msg.position.size = 2;
+  joint_state_msg.position.capacity = 2;
+  joint_state_msg.velocity.data = _vel;
+  joint_state_msg.velocity.size = 2;
+  joint_state_msg.velocity.capacity = 2;
+  // Add names to joint state axis
+  rosidl_runtime_c__String__Sequence__init(&joint_state_msg.name, 2);
+  for (uint8_t i = 0; i < 2; i++) {
+    rosidl_runtime_c__String__assign(&joint_state_msg.name.data[i], _names[i]);
+  }
+  // Add header to message
+  rosidl_runtime_c__String__assign(&joint_state_msg.header.frame_id, _frame_id);
 
   while (1) {
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
