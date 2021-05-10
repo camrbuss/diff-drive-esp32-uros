@@ -20,6 +20,11 @@ by an ESP32 running [micro-ROS](https://github.com/micro-ROS) and is driven by a
 ### Build/Flash Firmware
 Make sure the [micro_ros_espidf_component](https://github.com/micro-ROS/micro_ros_espidf_component) sub-module is updated
 
+Link the hidden component in the esp-idf v4.3 example. Something like:
+```sh
+ln -s ~/esp/esp-idf/examples/peripherals/pcnt/rotary_encoder/components/rotary_encoder/ ./components/rotary_encoder
+```
+
 ``` sh
 . ~/esp/esp-idf/export.sh
 idf.py set-target esp32
